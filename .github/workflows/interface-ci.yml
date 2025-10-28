@@ -1,0 +1,18 @@
+name: Interface CI (opc)
+
+on:
+  pull_request:
+    paths:
+      - "01-interface-talent/**"
+  push:
+    paths:
+      - "01-interface-talent/**"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Echo
+        run: |
+          echo "Verifique se seu projeto frontend possui README com instruções e URL de deploy público."

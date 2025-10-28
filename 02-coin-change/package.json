@@ -1,0 +1,12 @@
+{
+  "name": "coin-change",
+  "version": "1.0.0",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "test": "node tests/harness.js"
+  },
+  "dependencies": {
+    "yaml": "^2.4.5"
+  }
+}
