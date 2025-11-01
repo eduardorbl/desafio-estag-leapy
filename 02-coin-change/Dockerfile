@@ -11,5 +11,5 @@ RUN npm install --global yaml
 ENV NODE_PATH=/usr/local/lib/node_modules
 
 WORKDIR /app
-COPY main.py ./
+COPY main.py runner.yml ./
 CMD ["python3", "main.py"]
