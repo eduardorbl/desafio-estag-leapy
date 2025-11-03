@@ -108,6 +108,8 @@ JSON com formato:
 ### Executar com Docker
 
 ```bash
+cd 02-coin-change 
+
 # 1. Construir a imagem
 docker build -t coin-change .
 
