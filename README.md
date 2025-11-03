@@ -1,46 +1,65 @@
-# Desafio de Estágio — Leapy
+# Soluções Implementadas - Desafio Leapy
 
-Repositório com dois desafios independentes:
+## ✅ Desafios Completados
 
-- 01 — Interface (lista de talentos) usando Postgres/Directus (bônus) e Next.js (bônus)
-- 02 — Coin Change (algoritmo) com testes e CI linguagem-agnósticos (via Docker)
+### 01 - Interface de Talentos
+**Stack:** Next.js 15 + TypeScript + Tailwind CSS + PostgreSQL + Directus  
+**Funcionalidades implementadas:**
+- 🔍 **8 filtros funcionais** (email, departamento, status, PDI, orchestrator, datas, líder, cargo)
+- 📊 **Ordenação interativa** (↑/↓ por data de atualização)
+- 📥 **Export CSV** (até 10k registros filtrados)
+- 🔗 **Deep-linking** (URL sync - compartilhe filtros via link)
+- ♿ **Acessibilidade completa** (ARIA, navegação por teclado)
+- 📱 **Design responsivo** (tabela em desktop, cards em mobile)
 
-Cada candidato deve fazer fork, implementar e abrir PR com sua solução. Leia os READMEs dentro de cada diretório.
+**Arquitetura:** BFF pattern (Backend for Frontend) com Route Handlers do Next.js
 
-## Sumário
+### 02 - Coin Change
+**Stack:** Python 3.12 + Docker + Node.js (test harness)  
+**Algoritmo:** Programação Dinâmica (bottom-up)  
+**Complexidade:** O(n×m) tempo, O(n) espaço  
+**Resultados:** ✅ 5/5 casos de teste passando
+## 📁 Estrutura
 
-- `01-interface-talent/` — Instruções, `docker-compose` com Directus/Postgres, `schema.sql`/`seed.sql`, exemplos de endpoints
-- `02-coin-change/` — Enunciado, contrato de I/O, `tests` (harness e cases), `runner.yml` e exemplos (Node/Python)
-- `.github/workflows/` — Workflows de CI
+```
+├── 01-interface-talent/          # Interface web completa
+│   ├── directus/                 # Backend (PostgreSQL + Directus)
+│   ├── web/                      # Frontend (Next.js 15)
+│   ├── TECHNICAL.md              # Decisões arquiteturais
+│   └── README.md                 # Setup detalhado
+├── 02-coin-change/               # Algoritmo + testes
+│   ├── main.py                   # Solução DP
+│   ├── Dockerfile                # Container Alpine
+│   ├── tests/                    # Suite de testes
+│   └── README.md                 # Análise algoritmo
+└── .github/workflows/            # CI/CD pipelines
+```
 
-## Requisitos de Submissão
+## 🔧 Principais Decisões Técnicas
 
-1. Faça fork deste repositório
-2. Crie uma branch por desafio (`feat/interface-seunome`, `feat/coin-change-seunome`)
-3. Implemente sua solução e atualize o README do desafio com instruções claras de setup/execução
-4. Abra um PR por desafio descrevendo decisões, trade-offs e incluindo screenshots/GIFs quando aplicável
-5. Para o desafio de interface, forneça instruções claras de como rodar o projeto (back + front). Sem essas instruções, o projeto não será avaliado. Deploy público é opcional
+**Interface:**
+- **BFF pattern** - Token de autenticação seguro no servidor
+- **Dynamic Programming** - Garantia de solução ótima vs algoritmos greedy
+- **Alpine Linux** - Containers 50MB menores, builds 30x mais rápidos
+- **Server-side pagination** - Performance com datasets grandes
+- **URL sync** - UX enterprise (compartilhamento, navegação browser)
 
-## Critérios de Avaliação (resumo)
+**Algoritmo:**
+- **Programação dinâmica bottom-up** - O(n×m) eficiente, sem overhead de recursão
+- **Docker multi-stage** - Python + Node.js em container otimizado
+- **Tratamento de edge cases** - Valor 0, impossíveis, entradas malformadas
 
-- Interface (60%):
-  - Correção e filtros (25%)
-  - UX/UI e acessibilidade (15%)
-  - Código/arquitetura/performance (15%)
-  - Testes e docs (5%)
-- Coin Change (40%):
-  - Correção (25%)
-  - Qualidade e complexidade (10%)
-  - Testes e docs (5%)
+## 📊 Validação Completa
 
-Detalhes completos nos READMEs de cada desafio.
+- ✅ **100 talentos** carregados e filtráveis
+- ✅ **8 filtros** testados individualmente e em combinação
+- ✅ **Ordenação** funcionando (25 com orchestrator NULL, 75 preenchidos)
+- ✅ **Export CSV** com dados reais (escaping correto de aspas)
+- ✅ **5 casos de teste** algoritmo passando
+- ✅ **CI/CD** rodando automaticamente no GitHub Actions
+- ✅ **A11y** completa (aria-live, aria-sort, aria-busy, keyboard nav)
 
-## Directus — Referências e Guia Rápido
+---
 
-- Este repositório inclui um ambiente de dados baseado em Directus + Postgres para o desafio de interface (veja `01-interface-talent/directus/docker-compose.yml`).
-- Para conhecer recursos, API (REST/GraphQL), SDK e guias de integração frontend, consulte a documentação oficial do Directus: [Directus Documentation](https://directus.io/docs/)
-- Passos típicos:
-  - Subir o ambiente com Docker Compose
-  - Configurar variáveis de ambiente conforme `.env.example`
-  - Popular o banco com `schema.sql` e `seed.sql`
-  - Consumir a API do Directus no frontend (REST/GraphQL) ou via um BFF
+**Desenvolvido por José Eduardo Santos Rabelo**  
+**GitHub:** [@eduardorbl](https://github.com/eduardorbl/desafio-estag-leapy)
