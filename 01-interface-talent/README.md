@@ -48,7 +48,7 @@ Interface web para gerenciamento e consulta de talentos com busca avançada, mú
 ### Passo 1: Configurar e Iniciar o Backend
 
 ```bash
-cd directus
+cd 01-interface-talent/directus 
 cp .env.example .env
 docker compose up -d --build
 ```

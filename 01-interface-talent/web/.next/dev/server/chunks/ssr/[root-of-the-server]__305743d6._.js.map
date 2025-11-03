@@ -2,5 +2,5 @@
   "version": 3,
   "sources": [],
   "sections": [
-    {"offset": {"line": 18, "column": 0}, "map": {"version":3,"sources":["file:///Users/eduardosrbl/Downloads/leapy/desafio-estag-leapy/01-interface-talent/web/src/app/page.tsx"],"sourcesContent":["import { redirect } from 'next/navigation';\n\nexport default function RootPage() {\n  redirect('/talents');\n}\n"],"names":[],"mappings":";;;;AAAA;AAAA;;AAEe,SAAS;IACtB,IAAA,iMAAQ,EAAC;AACX","debugId":null}}]
+    {"offset": {"line": 18, "column": 0}, "map": {"version":3,"sources":["file:///Users/eduardosrbl/Downloads/leapy%20teste/desafio-estag-leapy/01-interface-talent/web/src/app/page.tsx"],"sourcesContent":["import { redirect } from 'next/navigation';\n\nexport default function RootPage() {\n  redirect('/talents');\n}\n"],"names":[],"mappings":";;;;AAAA;AAAA;;AAEe,SAAS;IACtB,IAAA,iMAAQ,EAAC;AACX","debugId":null}}]
 }
