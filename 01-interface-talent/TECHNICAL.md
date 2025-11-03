@@ -333,42 +333,6 @@ function TableRowSkeleton() {
 }
 ```
 
----
-
-## Melhorias Futuras (Roadmap)
-
-### Performance
-- [ ] Implementar React.memo em `<TableRow>` para evitar re-renders desnecessários
-- [ ] Adicionar cache HTTP (stale-while-revalidate) no BFF
-- [ ] Virtualização da tabela para >1000 itens (react-window)
-
-### Features
-- [ ] Vistas salvas (localStorage): salvar combinações de filtros
-- [ ] Ordenação por múltiplas colunas
-- [ ] Edição inline de registros
-- [ ] Validação de filtros com Zod no BFF
-
-### DevOps
-- [ ] Testes unitários do builder de filtros (Vitest)
-- [ ] CI/CD com GitHub Actions (lint + build + test)
-- [ ] Monitoramento com Sentry
-- [ ] Docker multi-stage build do Next.js
-
----
-
-## Métricas de Qualidade
-
-| Métrica | Valor | Ferramenta |
-|---------|-------|------------|
-| Bundle size (gzip) | ~80KB | `next build` |
-| First Load JS | ~95KB | Next.js report |
-| Lighthouse Performance | 95+ | Chrome DevTools |
-| Lighthouse Accessibility | 100 | Chrome DevTools |
-| TypeScript strict | ✅ | `tsconfig.json` |
-| ESLint errors | 0 | `next lint` |
-
----
-
 **Desenvolvido com foco em:**
 - ✅ Performance
 - ✅ Acessibilidade (A11y)

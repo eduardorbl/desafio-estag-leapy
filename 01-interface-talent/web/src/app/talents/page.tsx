@@ -74,6 +74,44 @@ const formatDateTime = (iso?: string | null) => {
 
 const cn = (...classes: (string | undefined | false)[]) => classes.filter(Boolean).join(' ');
 
+const LIMIT_OPTIONS = [10, 20, 50, 100] as const;
+const DEFAULT_PAGE = 1;
+const DEFAULT_LIMIT = 10;
+
+function isValidLimit(value: number): value is (typeof LIMIT_OPTIONS)[number] {
+  return LIMIT_OPTIONS.includes(value as (typeof LIMIT_OPTIONS)[number]);
+}
+
+function parsePositiveInt(value: string | null, fallback: number) {
+  if (!value) return fallback;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  const normalized = Math.floor(parsed);
+  return normalized > 0 ? normalized : fallback;
+}
+
+function parseLimit(value: string | null) {
+  const parsed = parsePositiveInt(value, DEFAULT_LIMIT);
+  return isValidLimit(parsed) ? parsed : DEFAULT_LIMIT;
+}
+
+function parseSortOrder(value: string | null): 'asc' | 'desc' {
+  return value === 'asc' || value === 'desc' ? value : 'desc';
+}
+
+function isAbortError(error: unknown): boolean {
+  if (error instanceof DOMException && error.name === 'AbortError') {
+    return true;
+  }
+
+  if (typeof error === 'object' && error !== null && 'name' in error) {
+    const { name } = error as { name?: string };
+    return name === 'AbortError';
+  }
+
+  return false;
+}
+
 /**
  * Componente Principal
  */
@@ -88,8 +126,8 @@ export default function TalentsPage() {
   const [endDate, setEndDate] = useState('');
   const [leaderId, setLeaderId] = useState('');
   const [targetRoleId, setTargetRoleId] = useState('');
-  const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(10);
+  const [page, setPage] = useState(DEFAULT_PAGE);
+  const [limit, setLimit] = useState(DEFAULT_LIMIT);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   // Dados
@@ -114,14 +152,19 @@ export default function TalentsPage() {
     if (params.get('endDate')) setEndDate(params.get('endDate')!);
     if (params.get('leaderId')) setLeaderId(params.get('leaderId')!);
     if (params.get('targetRoleId')) setTargetRoleId(params.get('targetRoleId')!);
-    if (params.get('page')) setPage(Number(params.get('page')));
-    if (params.get('limit')) setLimit(Number(params.get('limit')));
-    if (params.get('sort')) setSortOrder(params.get('sort') as 'asc' | 'desc');
+    const urlPage = params.get('page');
+    if (urlPage !== null) setPage(parsePositiveInt(urlPage, DEFAULT_PAGE));
+    const urlLimit = params.get('limit');
+    if (urlLimit !== null) setLimit(parseLimit(urlLimit));
+    const urlSort = params.get('sort');
+    if (urlSort !== null) setSortOrder(parseSortOrder(urlSort));
   }, []);
 
   // Atualizar URL quando filtros mudarem
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    const normalizedPage = Number.isFinite(page) ? Math.max(DEFAULT_PAGE, Math.floor(page)) : DEFAULT_PAGE;
+    const normalizedLimit = isValidLimit(limit) ? limit : DEFAULT_LIMIT;
     const params = new URLSearchParams();
     if (q) params.set('q', q);
     if (department) params.set('department', department);
@@ -132,8 +175,8 @@ export default function TalentsPage() {
     if (endDate) params.set('endDate', endDate);
     if (leaderId) params.set('leaderId', leaderId);
     if (targetRoleId) params.set('targetRoleId', targetRoleId);
-    if (page > 1) params.set('page', String(page));
-    if (limit !== 10) params.set('limit', String(limit));
+    if (normalizedPage > DEFAULT_PAGE) params.set('page', String(normalizedPage));
+    if (normalizedLimit !== DEFAULT_LIMIT) params.set('limit', String(normalizedLimit));
     if (sortOrder !== 'desc') params.set('sort', sortOrder);
     
     const newUrl = params.toString() ? `?${params.toString()}` : window.location.pathname;
@@ -145,6 +188,20 @@ export default function TalentsPage() {
 
   // Fetch de dados
   useEffect(() => {
+    const hasValidLimit = isValidLimit(limit);
+    const normalizedLimit = hasValidLimit ? limit : DEFAULT_LIMIT;
+    const normalizedPage = Number.isFinite(page) ? Math.max(DEFAULT_PAGE, Math.floor(page)) : DEFAULT_PAGE;
+
+    if (!hasValidLimit) {
+      setLimit(normalizedLimit);
+      return;
+    }
+
+    if (normalizedPage !== page) {
+      setPage(normalizedPage);
+      return;
+    }
+
     const abort = new AbortController();
 
     (async () => {
@@ -153,10 +210,9 @@ export default function TalentsPage() {
 
       try {
         const url = new URL('/api/talents', window.location.origin);
-        const requestPage = total > 0 ? Math.min(page, Math.ceil(total / limit)) : page;
 
-        url.searchParams.set('page', String(requestPage));
-        url.searchParams.set('limit', String(limit));
+        url.searchParams.set('page', String(normalizedPage));
+        url.searchParams.set('limit', String(normalizedLimit));
 
         if (qDebounced) url.searchParams.set('q', qDebounced);
         if (department) url.searchParams.set('department', department);
@@ -185,14 +241,16 @@ export default function TalentsPage() {
         setTotal(newTotal);
 
         // Auto-ajuste de página se necessário
-        const newTotalPages = Math.max(1, Math.ceil(newTotal / limit));
-        if (page > newTotalPages) {
+        const newTotalPages = Math.max(1, Math.ceil(newTotal / normalizedLimit));
+        if (normalizedPage > newTotalPages) {
           setPage(newTotalPages);
         }
-      } catch (err: any) {
-        if (err?.name !== 'AbortError') {
-          setError(err?.message || 'Erro ao carregar dados');
+      } catch (err: unknown) {
+        if (isAbortError(err)) {
+          return;
         }
+        const message = err instanceof Error ? err.message : 'Erro ao carregar dados';
+        setError(message);
       } finally {
         setLoading(false);
       }
@@ -201,7 +259,6 @@ export default function TalentsPage() {
     return () => abort.abort();
   }, [
     page,
-    total,
     limit,
     qDebounced,
     department,
@@ -217,10 +274,13 @@ export default function TalentsPage() {
 
   // Resetar página quando filtros mudarem
   useEffect(() => {
-    setPage(1);
+    setPage((prev) => (prev !== DEFAULT_PAGE ? DEFAULT_PAGE : prev));
   }, [qDebounced, department, status, pdi, orchestrator, startDate, endDate, leaderId, targetRoleId]);
 
-  const totalPages = useMemo(() => Math.max(1, Math.ceil(total / limit)), [total, limit]);
+  const totalPages = useMemo(() => {
+    const safeLimit = isValidLimit(limit) ? limit : DEFAULT_LIMIT;
+    return Math.max(1, Math.ceil(total / safeLimit));
+  }, [total, limit]);
 
   // Opções de filtros (valores internos → labels traduzidos)
   const departments = [
@@ -349,8 +409,9 @@ export default function TalentsPage() {
       link.download = `talentos-${new Date().toISOString().split('T')[0]}.csv`;
       link.click();
       URL.revokeObjectURL(link.href);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao exportar');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Erro ao exportar';
+      setError(message);
     } finally {
       setIsExporting(false);
     }
@@ -398,8 +459,9 @@ export default function TalentsPage() {
                   id="limit-select"
                   value={limit}
                   onChange={(e) => {
-                    setLimit(Number(e.target.value));
-                    setPage(1);
+                    const nextLimit = Number(e.target.value);
+                    setLimit(isValidLimit(nextLimit) ? nextLimit : DEFAULT_LIMIT);
+                    setPage(DEFAULT_PAGE);
                   }}
                   className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none ring-2 ring-transparent focus:border-blue-500 focus:ring-blue-500/20 transition"
                   aria-label="Itens por página"
@@ -530,26 +592,22 @@ export default function TalentsPage() {
                   <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
                     Cargo Alvo
                   </th>
-                  <th 
-                    className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider cursor-pointer hover:bg-slate-100 transition select-none"
-                    onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc');
-                      }
-                    }}
-                    tabIndex={0}
-                    role="button"
+                  <th
+                    scope="col"
+                    className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider"
                     aria-sort={sortOrder === 'desc' ? 'descending' : 'ascending'}
-                    aria-label={`Ordenar por data de atualização (${sortOrder === 'desc' ? 'mais recente primeiro' : 'mais antiga primeiro'})`}
                   >
-                    <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSortOrder((prev) => (prev === 'desc' ? 'asc' : 'desc'))}
+                      className="flex items-center gap-2 cursor-pointer hover:text-blue-600 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                      aria-label={`Ordenar por data de atualização (${sortOrder === 'desc' ? 'mais recente primeiro' : 'mais antiga primeiro'})`}
+                    >
                       Atualizado
                       <span className="text-blue-600" aria-hidden="true">
                         {sortOrder === 'desc' ? '↓' : '↑'}
                       </span>
-                    </div>
+                    </button>
                   </th>
                 </tr>
               </thead>
@@ -587,9 +645,9 @@ export default function TalentsPage() {
         <Pagination
           page={page}
           totalPages={totalPages}
-          onPrev={() => setPage((p) => Math.max(1, p - 1))}
+          onPrev={() => setPage((p) => Math.max(DEFAULT_PAGE, p - 1))}
           onNext={() => setPage((p) => Math.min(totalPages, p + 1))}
-          onGoto={(p) => setPage(Math.max(1, Math.min(p, totalPages)))}
+          onGoto={(p) => setPage(Math.max(DEFAULT_PAGE, Math.min(p, totalPages)))}
         />
       </section>
     </main>
@@ -828,39 +886,6 @@ function DateInput({
   );
 }
 
-function NumberInput({
-  label,
-  value,
-  onChange,
-  min,
-  max,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  min?: number;
-  max?: number;
-}) {
-  const id = useStableId(label);
-
-  return (
-    <div>
-      <Label htmlFor={id}>{label}</Label>
-      <input
-        id={id}
-        type="number"
-        inputMode="numeric"
-        min={min}
-        max={max}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={`ex.: ${min ?? 1}`}
-        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none ring-2 ring-transparent focus:border-blue-500 focus:ring-blue-500/20 transition placeholder:text-slate-400"
-      />
-    </div>
-  );
-}
-
 /**
  * Subcomponentes - Paginação
  */
@@ -879,11 +904,11 @@ function Pagination({
 }) {
   const pages = useMemo(() => {
     const result = new Set<number>();
-    result.add(1);
+    result.add(DEFAULT_PAGE);
     result.add(totalPages);
 
     for (let p = page - 1; p <= page + 1; p++) {
-      if (p >= 1 && p <= totalPages) result.add(p);
+      if (p >= DEFAULT_PAGE && p <= totalPages) result.add(p);
     }
 
     return Array.from(result).sort((a, b) => a - b);
@@ -893,7 +918,7 @@ function Pagination({
     <nav aria-label="Paginação" className="mt-8 flex items-center justify-between">
       <button
         onClick={onPrev}
-        disabled={page <= 1}
+        disabled={page <= DEFAULT_PAGE}
         className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
       >
         Anterior
