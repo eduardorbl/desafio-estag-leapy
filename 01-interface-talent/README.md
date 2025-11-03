@@ -213,35 +213,6 @@ docker compose -f directus/docker-compose.yml up -d --build
    # Deve retornar JSON com dados, não erro 401
    ```
 
-### Porta 3000 já em uso
-
-Se você ver a mensagem `Port 3000 is in use`, há duas opções:
-
-**Opção 1 - Matar o processo antigo:**
-```bash
-# Encontrar o processo
-lsof -ti:3000
-
-# Matar o processo (substitua PID pelo número retornado)
-kill -9 PID
-```
-
-**Opção 2 - Usar porta alternativa:**
-O Next.js automaticamente tentará usar porta 3001, 3002, etc. Basta acessar a URL mostrada no terminal.
-
-### Outras portas em uso
-
-Ajuste em `directus/.env`:
-```bash
-POSTGRES_PORT=5433
-PORT=8056
-```
-
-E em `web/.env.local`:
-```bash
-DIRECTUS_URL=http://localhost:8056
-```
-
 ### Reiniciar do zero
 ```bash
 cd directus
