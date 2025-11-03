@@ -1,2 +1,2 @@
-command: "node solution.js"
+command: "python3 main.py"
 workdir: "."
