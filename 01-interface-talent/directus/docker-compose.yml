@@ -12,14 +12,21 @@ services:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - pg_data:/var/lib/postgresql/data
-      - ./seed/schema.sql:/docker-entrypoint-initdb.d/00_schema.sql:ro
-      - ./seed/seed.sql:/docker-entrypoint-initdb.d/10_seed.sql:ro
+      # removi os mounts para /docker-entrypoint-initdb.d
+      # - ./seed/schema.sql:/docker-entrypoint-initdb.d/00_schema.sql:ro
+      # - ./seed/seed.sql:/docker-entrypoint-initdb.d/10_seed.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h postgres -U postgres -d leapy"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
   directus:
     image: directus/directus:10
     container_name: leapy_directus
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     ports:
       - "${PORT:-8055}:8055"
     environment:
@@ -35,9 +42,43 @@ services:
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@example.com}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin}
       DIRECTUS_EXPERIMENTAL_GRAPHQL_INTROSPECTION: "true"
-      EXTENSIONS_AUTO_RELOAD: "true"
+
+  # Job one-shot para aplicar schema/seed na ordem certa
+  db-seed:
+    image: postgres:15
+    container_name: leapy_db_seed
+    depends_on:
+      postgres:
+        condition: service_healthy
+      directus:
+        condition: service_started
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-leapy}
+      POSTGRES_HOST: postgres
+      PGPASSWORD: ${POSTGRES_PASSWORD:-postgres}
     volumes:
-      - ./extensions:/directus/extensions
+      - ./seed:/seed:ro
+    command:
+      - bash
+      - -lc
+      - |
+        set -euo pipefail
+        echo "DB-SEED: aguardando directus_users..."
+        until psql -h postgres -U postgres -d leapy -tAc "select to_regclass('public.directus_users')" | grep -q directus_users; do
+          sleep 2
+        done
+        echo "DB-SEED: garantindo pgcrypto..."
+        psql -h postgres -U postgres -d leapy -v ON_ERROR_STOP=1 -c "CREATE EXTENSION IF NOT EXISTS pgcrypto;"
+        echo "DB-SEED: aplicando schema (fase 1)..."
+        psql -h postgres -U postgres -d leapy -v ON_ERROR_STOP=1 -f /seed/01_schema_phase1.sql
+        echo "DB-SEED: adicionando FK cíclica..."
+        psql -h postgres -U postgres -d leapy -v ON_ERROR_STOP=1 -f /seed/02_schema_add_fk.sql
+        echo "DB-SEED: populando dados..."
+        psql -h postgres -U postgres -d leapy -v ON_ERROR_STOP=1 -f /seed/20_seed_fixed.sql
+        echo "DB-SEED: done."
+    restart: "no"
 
 volumes:
   pg_data:
