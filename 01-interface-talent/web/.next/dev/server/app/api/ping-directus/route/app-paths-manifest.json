@@ -1,0 +1,3 @@
+{
+  "/api/ping-directus/route": "app/api/ping-directus/route.js"
+}
